@@ -1,0 +1,10 @@
+const assert=require('assert'),fs=require('fs'),vm=require('vm'),{TextEncoder}=require('util');
+const context={module:{exports:{}},TextEncoder,Blob:class{constructor(parts){this.bytes=Buffer.concat(parts.map(p=>Buffer.from(p)));this.size=this.bytes.length;}}};
+vm.runInNewContext(fs.readFileSync(__dirname+'/public/zip.js','utf8'),context);
+const {buildZip,crc32}=context.module.exports;
+assert.equal(crc32(Buffer.from('123456789')),0xcbf43926);
+const zip=buildZip([{name:'first.txt',bytes:Buffer.from('first photo fixture')},{name:'second.txt',bytes:Buffer.from('second photo fixture')}]);
+fs.writeFileSync(__dirname+'/zip-test.zip',zip.bytes);
+assert.equal(zip.bytes.readUInt32LE(0),0x04034b50);
+assert.equal(zip.bytes.readUInt16LE(zip.bytes.length-12),2);
+console.log('ZIP CRC and entry count tests passed.');

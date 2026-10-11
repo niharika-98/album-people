@@ -1,0 +1,11 @@
+{
+  "name": "album-people",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Find and filter people in shared Google Photos albums",
+  "scripts": {
+    "start": "node server.cjs",
+    "test": "node test-importer.cjs && node test-clustering.cjs && node test-exporter.cjs && node test-runtime.cjs && node test-zip.cjs"
+  },
+  "engines": {"node": ">=22"}
+}

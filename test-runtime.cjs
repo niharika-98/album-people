@@ -1,0 +1,17 @@
+const assert=require('assert');
+const {configuration,createSessions}=require('./runtime.cjs');
+assert.deepEqual(configuration({PORT:'4000'}).hosts,['localhost:4000','127.0.0.1:4000']);
+const production=configuration({PORT:'10000',RENDER_EXTERNAL_URL:'https://album-people-example.onrender.com'});
+assert.equal(production.host,'0.0.0.0');assert.equal(production.secure,true);assert.deepEqual(production.hosts,['album-people-example.onrender.com']);
+assert.throws(()=>configuration({PORT:'bad'}));
+let time=0;const sessions=createSessions({now:()=>time,ttl:1000,max:2});
+const response=()=>({setHeader(name,value){this.cookie=value;}});
+const firstResponse=response(),secondResponse=response();
+const first=sessions({headers:{}},firstResponse,true),second=sessions({headers:{}},secondResponse,true);
+first.images.set('one','source-one');second.images.set('two','source-two');
+assert.equal(second.images.has('one'),false);second.images.clear();assert.equal(first.images.get('one'),'source-one');
+assert(firstResponse.cookie.includes('HttpOnly'));assert(firstResponse.cookie.includes('Secure'));
+assert.strictEqual(sessions({headers:{cookie:firstResponse.cookie.split(';')[0]}},response(),true),first);
+assert.throws(()=>sessions({headers:{}},response(),true));
+time=1001;assert.notStrictEqual(sessions({headers:{cookie:firstResponse.cookie.split(';')[0]}},response(),true),first);
+console.log('Runtime tests passed: hosted configuration, session isolation, secure cookies, capacity and expiry.');
