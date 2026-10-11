@@ -12,6 +12,13 @@ function originalPhotoLink(photo){
 }
 fetch('/api/export-config').then(r=>r.json()).then(c=>{exportConfig=c;}).catch(()=>{});
 function status(message) { $('status').textContent = message; }
+function scanStatus(state,title,detail,done=0,total=0){
+  $('scan-status').dataset.state=state;
+  $('scan-status-title').textContent=title;
+  $('scan-status-detail').textContent=detail;
+  const progress=$('scan-status-progress');progress.hidden=!['loading','scanning','stopping'].includes(state);
+  if(total){progress.max=total;progress.value=done;}else{progress.removeAttribute('value');}
+}
 function loadModels() {
   if (!window.faceapi) throw Error('Face library could not load. Check your internet connection and reload.');
   if (!modelPromise) {
@@ -71,6 +78,7 @@ $('import').onsubmit = async e => {
     const response=await fetch('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:$('url').value.trim()})});
     const result=await response.json();if(!response.ok)throw Error(result.error);
     album=result;faces=[];groups=[];corrections=[];selected=null;$('title').textContent=album.title;$('workspace').hidden=false;renderPeople();gallery();
+    $('scan').textContent='Find people';scanStatus('ready','Ready to find people',album.photos.length+' photos ready to scan. Select Find people to begin.');
     status(album.complete ? `Imported all ${album.photos.length} photos. Select “Find people” to scan faces.` : `Imported ${album.photos.length} of ${album.total || 'an unknown number of'} photos. This album may be incomplete; pagination is not yet supported.`);
   }catch(e){status(e.message);}finally{$('submit').disabled=false;}
 };
@@ -78,11 +86,13 @@ $('scan').onclick = async () => {
   if(!album||scanning)return;
   scanning=true;cancelled=false;faces=[];corrections=[];groups=[];selected=null;renderPeople();$('drive-open').disabled=true;$('handoff-open').disabled=true;$('export-open').disabled=true;$('scan').disabled=true;$('submit').disabled=true;$('threshold').disabled=true;$('stop').hidden=false;$('progress').hidden=false;$('progress').max=album.photos.length;$('progress').value=0;
   let failed=0,processed=0;
+  $('scan').textContent='Scanning…';scanStatus('loading','Scan in progress — loading face models','Keep this tab open. People groups will appear as photos are scanned.');
   try {
     status('Loading face models. The first scan may take a little longer…');await loadModels();
     for(const photo of album.photos){
       if(cancelled)break;
       status(`Scanning photo ${processed+1} of ${album.photos.length}…`);
+      scanStatus('scanning','Scan in progress — '+Math.round(processed/album.photos.length*100)+'%','Scanning photo '+(processed+1)+' of '+album.photos.length+'. Results are still being updated.',processed,album.photos.length);
       try{
         const img=await faceapi.fetchImage(photo.image);
         const detections=await faceapi.detectAllFaces(img,new faceapi.SsdMobilenetv1Options({minConfidence:0.5})).withFaceLandmarks().withFaceDescriptors();
@@ -98,9 +108,10 @@ $('scan').onclick = async () => {
       await new Promise(resolve=>setTimeout(resolve,0));
     }
     regroup();status(`${cancelled?'Stopped':'Scan complete'}: ${processed} photos scanned, ${faces.length} faces in ${groups.length} estimated person groups. ${failed} photos could not be analyzed. Adjust sensitivity to refine groups.`);
-  }catch(e){status('Face scan failed: '+e.message);}finally{scanning=false;renderPeople();$('drive-open').disabled=driveBusy;$('handoff-open').disabled=!album.sourceUrl;$('export-open').disabled=exportBusy;$('scan').disabled=false;$('submit').disabled=false;$('threshold').disabled=false;$('stop').hidden=true;$('progress').hidden=true;}
+    scanStatus(cancelled?'stopped':'complete',cancelled?'Scan stopped — partial results':'✓ Scan complete',`${processed} of ${album.photos.length} photos checked · ${groups.length} estimated people found.${failed?' '+failed+' photos could not be analyzed.':''} ${cancelled?'Select Scan again to restart.':'Select a person below to see their photos.'}`,processed,album.photos.length);
+  }catch(e){status('Face scan failed: '+e.message);scanStatus('failed','Scan failed',e.message+' Select Scan again to retry.');}finally{scanning=false;$('scan').textContent='Scan again';renderPeople();$('drive-open').disabled=driveBusy;$('handoff-open').disabled=!album.sourceUrl;$('export-open').disabled=exportBusy;$('scan').disabled=false;$('submit').disabled=false;$('threshold').disabled=false;$('stop').hidden=true;$('progress').hidden=true;}
 };
-$('stop').onclick=()=>{cancelled=true;status('Stopping after the current photo…');};
+$('stop').onclick=()=>{cancelled=true;status('Stopping after the current photo…');$('scan-status-title').textContent='Stopping scan…';$('scan-status-detail').textContent='Finishing the current photo. The results will be partial.';$('scan-status').dataset.state='stopping';};
 $('threshold').oninput=()=>{$('threshold-value').textContent=$('threshold').value;if(faces.length)regroup();};
 $('close').onclick=()=>$('viewer').close();
 $('merge').onclick=()=>{
