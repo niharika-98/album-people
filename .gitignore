@@ -11,4 +11,7 @@ album-people-source.zip
 .env.*
 node_modules/
 inspect-album.cjs
+github-verification/
+preview-github.png
+preview-render-signup.png
 *.log

@@ -1,5 +1,7 @@
 # Album People
 
+**[Open the app](https://album-people.onrender.com/)** — paste a shared Google Photos album link to get started. Hosted on Render's free plan; the first visit after inactivity can take roughly a minute to wake up.
+
 [Deployment instructions](DEPLOYMENT.md) · Deploy the UI and backend together using the included `render.yaml`.
 
 Experimental local web app: shared Google Photos link → face groups → photos containing a selected person.

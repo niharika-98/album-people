@@ -1,5 +1,10 @@
 # Public deployment
 
+Public app: https://album-people.onrender.com/  
+Source: https://github.com/niharika-98/album-people
+
+The current deployment is a free Node web service in Singapore, connected using Render's **Public Git Repository** option. Build command: `node --check server.cjs`. Start command: `node server.cjs`. Environment: `NODE_VERSION=22`. This connection does not automatically deploy every GitHub commit; use **Manual Deploy → Deploy latest commit** after app changes, or configure a Blueprint/Git provider integration for automatic deployments.
+
 Deploy the UI and Node backend together to preserve shared-album link import. GitHub Pages alone cannot execute the importer or image proxy.
 
 ## GitHub + Render free web service
